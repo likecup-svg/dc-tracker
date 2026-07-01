@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>DC 자산 통장</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Spoqa+Han+Sans+Neo:wght@400;500;700&display=swap');
+
+  :root{
+    --ink:#111111;
+    --ink-soft:#333333;
+    --paper:#fbdce3;
+    --paper-card:#ffffff;
+    --line:#f3b8c6;
+    --gold:#e0364f;
+    --gold-bright:#ef5169;
+    --leaf:#3f9b5e;
+    --leaf-soft:#e3f3e7;
+    --plus:#3f9b5e;
+    --minus:#d63b52;
+    --mono:"Spoqa Han Sans Neo", -apple-system, sans-serif;
+    --serif:"Noto Serif KR", serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--mono);
+    padding-bottom:100px;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ── 통장 표지 느낌의 헤더 ── */
+  header{
+    position:sticky; top:0; z-index:10;
+    background:
+      radial-gradient(circle at 90% -20%, var(--leaf-soft), transparent 50%),
+      var(--paper);
+    color:var(--ink);
+    padding:26px 20px 22px;
+    border-bottom:3px solid var(--leaf);
+  }
+  header .bookmark{
+    font-family:var(--serif);
+    font-size:11px; letter-spacing:.25em;
+    color:var(--leaf);
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  header .total-label{font-size:12px; color:var(--ink-soft); margin-bottom:2px;}
+  header .total-value{
+    font-family:var(--serif); font-size:32px; font-weight:700;
+    letter-spacing:-0.01em; color:var(--gold);
+  }
+  header .yield{
+    display:inline-block; margin-top:6px;
+    font-size:12.5px; font-weight:700;
+    padding:2px 9px; border-radius:99px;
+  }
+  header .yield.up{ color:#1d5c39; background:var(--leaf-soft); }
+  header .yield.down{ color:#a3233a; background:#fde2e6; }
+  header .breakdown{
+    display:flex; gap:16px; font-size:11px; color:var(--ink-soft);
+    margin-top:12px; padding-top:10px;
+    border-top:1px solid var(--line);
+  }
+  header .breakdown b{color:var(--ink); font-weight:700;}
+
+  main{padding:16px; background:var(--paper);}
+
+  .ledger-title{
+    font-family:var(--serif); font-size:13px; color:var(--ink-soft);
+    margin:6px 4px 8px; display:flex; align-items:center; gap:8px;
+  }
+  .ledger-title::after{
+    content:""; flex:1; height:1px; background:var(--line);
+  }
+
+  .card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    box-shadow:0 1px 0 var(--line);
+    overflow:hidden;
+  }
+  .row{
+    display:flex; flex-direction:column;
+    padding:12px 14px;
+    border-bottom:1px dashed var(--line);
+  }
+  .row:last-child{border-bottom:none;}
+  .row-top{display:flex; justify-content:space-between; align-items:baseline;}
+  .row .name{font-weight:700; font-size:14.5px;}
+  .row .value{font-family:var(--serif); font-size:14.5px; font-weight:700;}
+  .row-mid{
+    display:flex; justify-content:space-between;
+    font-size:11px; color:#86805f; margin-top:3px;
+  }
+  .row-bot{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:5px;
+  }
+  .pnl-pos{color:var(--plus); font-size:12px; font-weight:700;}
+  .pnl-neg{color:var(--minus); font-size:12px; font-weight:700;}
+  .weight-bar-wrap{
+    flex:1; margin-left:10px;
+    background:#f3b8c6; border-radius:99px; height:5px; overflow:hidden;
+  }
+  .weight-bar{height:100%; background:var(--gold); border-radius:99px;}
+
+  .fab{
+    position:fixed; bottom:22px; right:20px;
+    width:58px; height:58px; border-radius:50%;
+    background:radial-gradient(circle at 35% 28%, var(--gold-bright), var(--gold));
+    color:#fff6f7; font-size:28px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    border:3px solid var(--leaf-soft);
+    box-shadow:0 6px 16px rgba(224,54,79,.35);
+  }
+  .fab::after{
+    content:""; position:absolute; top:-6px; right:14px;
+    width:14px; height:8px; background:var(--leaf);
+    border-radius:50% 50% 0 0; transform:rotate(15deg);
+  }
+
+  .sheet{
+    position:fixed; inset:0; background:rgba(20,26,20,.55);
+    display:none; align-items:flex-end; z-index:20;
+  }
+  .sheet.open{display:flex;}
+  .sheet-inner{
+    background:var(--paper); width:100%; border-radius:18px 18px 0 0;
+    padding:20px 18px 24px; max-height:82vh; overflow:auto;
+    border-top:3px solid var(--leaf);
+  }
+  .sheet-title{
+    font-family:var(--serif); font-size:16px; font-weight:700;
+    margin-bottom:14px; color:var(--ink);
+  }
+  .field{margin-bottom:13px;}
+  .field label{display:block; font-size:11.5px; color:#86805f; margin-bottom:5px; font-weight:700;}
+  .field select, .field input{
+    width:100%; padding:11px; border:1px solid var(--line); border-radius:6px;
+    font-size:15px; background:#fff; color:var(--ink); font-family:var(--mono);
+  }
+  .field select:focus, .field input:focus{outline:none; border-color:var(--gold);}
+  .submit{
+    width:100%; padding:14px; border:none; border-radius:6px;
+    background:var(--gold); color:#fff6f7; font-size:15px; font-weight:700;
+    letter-spacing:.02em;
+  }
+  .submit:active{background:var(--ink-soft);}
+
+  .toast{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    background:var(--leaf); color:#fff; padding:9px 18px; border-radius:20px;
+    font-size:12.5px; z-index:30; opacity:0; transition:opacity .3s;
+    border:1px solid var(--leaf-soft);
+  }
+  .toast.show{opacity:1;}
+  .refresh{font-size:11px; color:var(--ink-soft); text-align:center; margin-top:14px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bookmark">DC 퇴직연금 관리</div>
+  <div class="total-label">총자산</div>
+  <div class="total-value" id="totalValue">불러오는 중...</div>
+  <div id="yieldBadge"></div>
+  <div class="breakdown" id="breakdown"></div>
+</header>
+
+<main>
+  <div class="ledger-title">보유 현황</div>
+  <div class="card" id="holdingsCard">
+    <div id="holdingsList"></div>
+  </div>
+  <div class="refresh" id="refreshTime"></div>
+</main>
+
+<button class="fab" id="openSheet">+</button>
+
+<div class="sheet" id="sheet">
+  <div class="sheet-inner">
+    <div class="sheet-title">거래 기록 추가</div>
+    <div class="field">
+      <label>날짜</label>
+      <input type="date" id="f_date">
+    </div>
+    <div class="field">
+      <label>구분</label>
+      <select id="f_type">
+        <option>매수</option><option>매도</option>
+        <option>입금</option><option>출금</option>
+        <option>가입</option><option>해지</option>
+        <option>배당</option><option>수수료</option><option>조정</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>종목/상품</label>
+      <select id="f_name">
+        <option>TIGER 200</option>
+        <option>TIGER 미국S&P500</option>
+        <option>KODEX TDF2050액티브적격</option>
+        <option>TIGER 미국나스닥100</option>
+        <option>TIGER 미국S&P500(H)</option>
+        <option>TIGER 미국나스닥100채권혼합50</option>
+        <option>KODEX AI반도체TOP2플러스</option>
+        <option>SOL AI반도체TOP2플러스</option>
+        <option>현금</option>
+        <option>신한은행 정기예금</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>수량 / 금액 (매도·출금·해지·수수료는 마이너스로)</label>
+      <input type="number" id="f_qty" placeholder="예: 10 또는 -10">
+    </div>
+    <div class="field">
+      <label>단가 (ETF 매수·매도 시)</label>
+      <input type="number" id="f_price" placeholder="예: 57000">
+    </div>
+    <div class="field">
+      <label>금리 (연%, 예금 해지 시)</label>
+      <input type="number" step="0.01" id="f_rate" placeholder="예: 3.5">
+    </div>
+    <div class="field">
+      <label>개월 (예금 해지 시)</label>
+      <input type="number" id="f_months" placeholder="예: 6">
+    </div>
+    <button class="submit" id="submitBtn">기록 추가</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ⚠️ 여기에 Apps Script 배포 후 나온 웹 앱 URL을 붙여넣으세요
+const API_URL = "https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbxTNbFDX5G8IG_mFYZG9H9B0dZPD25eS5GNnapP4vifwhVaTGi7BgejH_LMGHkh4iM/exec";
+const INITIAL_AMOUNT = 111043786;
+
+const el = id => document.getElementById(id);
+
+function showToast(msg){
+  const t = el("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+async function loadData(){
+  try{
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    render(data);
+  }catch(err){
+    el("totalValue").textContent = "불러오기 실패";
+    showToast("연결 실패: API_URL 확인 필요");
+  }
+}
+
+function render(data){
+  el("totalValue").textContent = Math.round(data.total).toLocaleString() + "원";
+
+  const yieldPct = ((data.total - INITIAL_AMOUNT) / INITIAL_AMOUNT) * 100;
+  const up = yieldPct >= 0;
+  el("yieldBadge").innerHTML = `<span class="yield ${up?'up':'down'}">${up?'+':''}${yieldPct.toFixed(2)}%</span>`;
+
+  let etf=0, cash=0, deposit=0;
+  data.holdings.forEach(h=>{
+    if(h.name==="현금") cash += h.value;
+    else if(h.name.includes("예금")||h.name.includes("적금")) deposit += h.value;
+    else etf += h.value;
+  });
+  el("breakdown").innerHTML = `
+    <span>ETF <b>${Math.round(etf).toLocaleString()}</b>원</span>
+    <span>현금 <b>${Math.round(cash).toLocaleString()}</b>원</span>
+    <span>예금 <b>${Math.round(deposit).toLocaleString()}</b>원</span>`;
+
+  el("holdingsList").innerHTML = data.holdings.map(h => {
+    const isCash = h.name === "현금" || h.name.includes("예금") || h.name.includes("적금");
+    const unit = isCash ? "원" : "주";
+    const pnlClass = h.pnl >= 0 ? "pnl-pos" : "pnl-neg";
+    const pnlSign = h.pnl >= 0 ? "+" : "";
+    const weightPct = (h.weight * 100).toFixed(1);
+    const pnlStr = isCash ? "" : `<span class="${pnlClass}">${pnlSign}${Math.round(h.pnl).toLocaleString()}원 (${pnlSign}${(h.pnlPct*100).toFixed(2)}%)</span>`;
+    const avgStr = isCash ? "" : `평단가 ${Math.round(h.avgPrice).toLocaleString()}원`;
+
+    return `
+    <div class="row">
+      <div class="row-top">
+        <div class="name">${h.name}</div>
+        <div class="value">${Math.round(h.value).toLocaleString()}원</div>
+      </div>
+      <div class="row-mid">
+        <span>${h.qty.toLocaleString()}${unit} · 현재가 ${h.price.toLocaleString()}${avgStr ? " · " + avgStr : ""}</span>
+      </div>
+      <div class="row-bot">
+        ${pnlStr}
+        <div class="weight-bar-wrap">
+          <div class="weight-bar" style="width:${Math.min(weightPct,100)}%"></div>
+        </div>
+        <span style="font-size:11px;color:#86805f;margin-left:6px;white-space:nowrap;">${weightPct}%</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  el("refreshTime").textContent = "마지막 갱신 " + new Date().toLocaleTimeString("ko-KR");
+}
+
+el("openSheet").addEventListener("click", () => {
+  el("f_date").value = new Date().toISOString().slice(0,10);
+  el("sheet").classList.add("open");
+});
+el("sheet").addEventListener("click", e => {
+  if(e.target.id === "sheet") el("sheet").classList.remove("open");
+});
+
+el("submitBtn").addEventListener("click", async () => {
+  const payload = {
+    date: el("f_date").value,
+    type: el("f_type").value,
+    name: el("f_name").value,
+    qty: el("f_qty").value,
+    price: el("f_price").value,
+    rate: el("f_rate").value,
+    months: el("f_months").value
+  };
+  try{
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(payload)
+    });
+    showToast("기록이 추가됐습니다");
+    el("sheet").classList.remove("open");
+    setTimeout(loadData, 800);
+  }catch(err){
+    showToast("추가 실패");
+  }
+});
+
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>
