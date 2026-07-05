@@ -356,7 +356,7 @@ function renderDonut(allocation, total) {
 
   allocation.forEach((a, i) => {
     const len    = a.weight * C;
-    const offset = C - cumLen;
+    const offset = -cumLen; // 세그먼트 시작 위치 (누적 길이만큼 음수 오프셋)
     const color  = CLASS_COLORS[a.name] || "#888";
 
     segments += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
